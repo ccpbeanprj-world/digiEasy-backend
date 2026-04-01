@@ -1,0 +1,17 @@
+//create a user
+
+$u3 = @{
+  firstName = "John3"
+  lastName = "Doe"
+  email = "john.doe@example.com"
+  password = "Abcd12343"
+  passwordConfirmation = "Abcd12343"
+  gender = "M"
+  birthday = "2000-01-15"
+  mobilePhoneNumber = "12345678"
+} | ConvertTo-Json
+
+Invoke-RestMethod -Method Post `
+  -Uri "http://localhost:5000/api/users/register" `
+  -ContentType "application/json" `
+  -Body $u1

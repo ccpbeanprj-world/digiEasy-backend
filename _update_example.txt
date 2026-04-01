@@ -1,0 +1,13 @@
+//update password
+
+$updatePwd = @{
+  email = "john.doe@example.com"
+  currentPassword = "Abcd1234"
+  newPassword = "Newpass123"
+  newPasswordConfirmation = "Newpass123"
+} | ConvertTo-Json
+
+Invoke-RestMethod -Method Patch `
+  -Uri "http://localhost:5000/api/users/password" `
+  -ContentType "application/json" `
+  -Body $updatePwd
