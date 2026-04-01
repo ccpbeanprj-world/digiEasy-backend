@@ -10,12 +10,8 @@ namespace digiEasy_backend.Controllers
         {
             return Ok(new
             {
-                message = "digiEasy backend API is running.",
-                endpoints = new[]
-                {
-                    "POST /api/users/register",
-                    "PATCH /api/users/password"
-                }
+                message = "digiEasy API",
+                swagger = "/swagger"
             });
         }
     }

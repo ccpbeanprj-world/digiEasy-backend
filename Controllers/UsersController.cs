@@ -11,6 +11,9 @@ namespace digiEasy_backend.Controllers
     [Route("api/users")]
     public class UsersController : Controller
     {
+        private static readonly Regex EmailRegex = new(@"^[^@\s]+@[^@\s]+\.[^@\s]+$", RegexOptions.Compiled);
+        private static readonly Regex PasswordStrengthRegex = new(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$", RegexOptions.Compiled);
+
         private readonly AppDbContext _dbContext;
         private readonly PasswordHasher<User> _passwordHasher;
 
@@ -40,8 +43,8 @@ namespace digiEasy_backend.Controllers
                 return BadRequest(new { error = "All fields are required." });
             }
 
-            var normalizedEmail = request.Email.Trim().ToLowerInvariant();
-            if (!Regex.IsMatch(normalizedEmail, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+            var normalizedEmail = NormalizeEmail(request.Email);
+            if (!EmailRegex.IsMatch(normalizedEmail))
             {
                 return BadRequest(new { error = "Invalid email format." });
             }
@@ -56,7 +59,7 @@ namespace digiEasy_backend.Controllers
                 return BadRequest(new { error = "User must be at least 18 years old." });
             }
 
-            if (!Regex.IsMatch(request.Password, @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$"))
+            if (!PasswordStrengthRegex.IsMatch(request.Password))
             {
                 return BadRequest(new { error = "Password must be at least 8 characters and include uppercase, lowercase, and a digit." });
             }
@@ -115,20 +118,18 @@ namespace digiEasy_backend.Controllers
                 return BadRequest(new { error = "All fields are required." });
             }
 
-            var normalizedEmail = request.Email.Trim().ToLowerInvariant();
-            var user = _dbContext.Users.SingleOrDefault(u => u.Email == normalizedEmail);
+            var user = FindUserByEmail(request.Email);
             if (user == null)
             {
                 return BadRequest(new { error = "User does not exist." });
             }
 
-            var passwordCheck = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.CurrentPassword);
-            if (passwordCheck == PasswordVerificationResult.Failed)
+            if (!PasswordMatches(user, request.CurrentPassword))
             {
                 return BadRequest(new { error = "Current password is incorrect." });
             }
 
-            if (!Regex.IsMatch(request.NewPassword, @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$"))
+            if (!PasswordStrengthRegex.IsMatch(request.NewPassword))
             {
                 return BadRequest(new { error = "New password must be at least 8 characters and include uppercase, lowercase, and a digit." });
             }
@@ -147,6 +148,77 @@ namespace digiEasy_backend.Controllers
             _dbContext.SaveChanges();
 
             return Ok(new { message = "Password updated successfully." });
+        }
+
+        [HttpPost("verify-password")]
+        public IActionResult VerifyPassword([FromBody] VerifyPasswordRequest request)
+        {
+            if (request == null)
+            {
+                return BadRequest(new { error = "Request body is required." });
+            }
+
+            if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
+            {
+                return BadRequest(new { error = "Email and password are required." });
+            }
+
+            var user = FindUserByEmail(request.Email);
+            if (user == null)
+            {
+                return Ok(new { valid = false, reason = "user_not_found" });
+            }
+
+            if (!PasswordMatches(user, request.Password))
+            {
+                return Ok(new { valid = false, reason = "password_mismatch" });
+            }
+
+            return Ok(new { valid = true });
+        }
+
+        [HttpDelete]
+        public IActionResult DeleteUser([FromBody] DeleteUserRequest request)
+        {
+            if (request == null)
+            {
+                return BadRequest(new { error = "Request body is required." });
+            }
+
+            if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
+            {
+                return BadRequest(new { error = "Email and password are required." });
+            }
+
+            var user = FindUserByEmail(request.Email);
+            if (user == null)
+            {
+                return BadRequest(new { error = "User does not exist." });
+            }
+
+            if (!PasswordMatches(user, request.Password))
+            {
+                return BadRequest(new { error = "Password is incorrect." });
+            }
+
+            _dbContext.Users.Remove(user);
+            _dbContext.SaveChanges();
+
+            return Ok(new { message = "User deleted successfully." });
+        }
+
+        private User FindUserByEmail(string email)
+        {
+            var normalized = NormalizeEmail(email);
+            return _dbContext.Users.SingleOrDefault(u => u.Email == normalized);
+        }
+
+        private static string NormalizeEmail(string email) => email.Trim().ToLowerInvariant();
+
+        private bool PasswordMatches(User user, string plainPassword)
+        {
+            var r = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, plainPassword);
+            return r == PasswordVerificationResult.Success || r == PasswordVerificationResult.SuccessRehashNeeded;
         }
 
         private static bool IsAtLeast18(DateTime birthday)

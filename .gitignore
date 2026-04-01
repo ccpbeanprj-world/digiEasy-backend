@@ -51,3 +51,9 @@ Desktop.ini
 
 ## Local-only config (optional)
 appsettings.*.local.json
+
+## Optional alternate build output (see README)
+artifacts/
+
+## Last email used by scripts/register.ps1 (for update-password.ps1)
+.last-register-email
