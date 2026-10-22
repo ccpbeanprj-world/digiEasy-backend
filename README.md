@@ -4,7 +4,7 @@ ASP.NET Core 8 Web API: user **register**, **password update**, **verify passwor
 
 ## Prerequisites
 
-- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) — see [`global.json`](global.json) for SDK pinning (`8.0.100` + `rollForward: latestFeature`).
+- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) **8.0.426** or any newer 8.0 SDK, including later feature bands such as 8.0.5xx (runtime **8.0.32**, October 2026 security update). [`global.json`](global.json) sets that minimum with `rollForward: latestFeature`. SDKs older than 8.0.426 are not used.
 
 ## Quick start
 
